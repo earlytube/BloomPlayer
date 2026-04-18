@@ -1031,13 +1031,9 @@ function saveUserTier(user,tier,callback){
 }
   /* GET TOKEN TO LOAD VIDEOS */
 function tryGetTokenSilently(user){
-  localStorage.setItem('et_redirect_intent','recover_token');
-  var silentProvider=new firebase.auth.GoogleAuthProvider();
-  silentProvider.addScope('https://www.googleapis.com/auth/drive.file');
-  silentProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
-  silentProvider.setCustomParameters({prompt:'none',login_hint:user.email});
-  auth.signInWithRedirect(silentProvider);
+  showReconnectBanner();
 }
+
 
 function showReconnectBanner(){
   var card=document.getElementById('no-videos-card');
