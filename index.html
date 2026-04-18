@@ -1118,7 +1118,12 @@ function createAndSaveSheet(user,token){
       cp.addScope('https://www.googleapis.com/auth/spreadsheets');
       cp.setCustomParameters({prompt:'consent'});
       auth.signInWithRedirect(cp);
+    } else {
+      console.error('createAndSaveSheet failed:',e);
+      showNoVideosState(null);
     }
+  });
+}
 
 function showNoVideosState(sheetUrl){
   document.getElementById('personal-card').style.display='none';
