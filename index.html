@@ -699,10 +699,8 @@ function onConfigLoaded(){
 // Validates email field, then triggers Google auth
 function welcomeSignInWithGoogle(){
   document.getElementById('welcome-error').textContent='';
-  auth.signInWithPopup(provider).catch(function(e){
- if(e.code==='auth/popup-blocked'){showToast('Pop-up was blocked. Please allow pop-ups and try again.',true);}
-else if(e.code!=='auth/cancelled-popup-request'&&e.code!=='auth/popup-closed-by-user'){showToast('Sign in failed. Please try again.',true);}
-  });
+  localStorage.setItem('et_redirect_intent','welcome_google');
+  auth.signInWithRedirect(provider);
 }
 
 
@@ -877,13 +875,8 @@ function stopInactivityWatch(){
 
 /* ── TOKEN REFRESH ──────────────────────────────────────────────────────── */
 function refreshTokenAndRetry(callback){
-  auth.signInWithPopup(driveProvider).then(function(result){
-    if(result&&result.credential&&result.credential.accessToken){
-      var token=result.credential.accessToken;
-      localStorage.setItem('et_gtoken',token);
-      callback(token);
-    }
-  }).catch(function(e){console.error('Token refresh failed',e);});
+  localStorage.setItem('et_redirect_intent','recover_token');
+  auth.signInWithRedirect(driveProvider);
 }
 
 /* ── SIGN IN / OUT ──────────────────────────────────────────────────────── */
@@ -1021,19 +1014,12 @@ function saveUserTier(user,tier,callback){
 }
   /* GET TOKEN TO LOAD VIDEOS */
 function tryGetTokenSilently(user){
+  localStorage.setItem('et_redirect_intent','recover_token');
   var silentProvider=new firebase.auth.GoogleAuthProvider();
   silentProvider.addScope('https://www.googleapis.com/auth/drive.file');
   silentProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
- silentProvider.setCustomParameters({prompt:'none', login_hint:user.email});
-  auth.signInWithPopup(silentProvider).then(function(result){
-    if(result&&result.credential&&result.credential.accessToken){
-      var token=result.credential.accessToken;
-      localStorage.setItem('et_gtoken',token);
-      setupUserProfile(user,token);
-    }
-  }).catch(function(){
-    showReconnectBanner();
-  });
+  silentProvider.setCustomParameters({prompt:'none',login_hint:user.email});
+  auth.signInWithRedirect(silentProvider);
 }
 
 function showReconnectBanner(){
@@ -1074,29 +1060,12 @@ function loadUserProfile(user){
 
 /* ── RECOVER WITH FRESH TOKEN ───────────────────────────────────────────── */
 function recoverWithFreshToken(user){
+  localStorage.setItem('et_redirect_intent','recover_token');
   var cp=new firebase.auth.GoogleAuthProvider();
   cp.addScope('https://www.googleapis.com/auth/drive.file');
   cp.addScope('https://www.googleapis.com/auth/spreadsheets');
-  cp.setCustomParameters({
-    login_hint: user.email  // ← forces correct account
-  });
-  auth.signInWithPopup(cp).then(function(result){
-  if(result&&result.credential&&result.credential.accessToken){
-      if(result.user.email!==user.email){
-        showToast('Please use the same Google account you signed in with ('+user.email+').',true);
-        showNoVideosState(null);
-        return;
-      }
-      var token=result.credential.accessToken;
-      localStorage.setItem('et_gtoken',token);
-      setupUserProfile(user,token);
-    } else {
-      showNoVideosState(null);
-    }
-  }).catch(function(e){
-    console.error('recoverWithFreshToken failed:',e);
-    showNoVideosState(null);
-  });
+  cp.setCustomParameters({login_hint:user.email});
+  auth.signInWithRedirect(cp);
 }
 
 function setupUserProfile(user,token,docData){
@@ -1127,22 +1096,13 @@ function createAndSaveSheet(user,token){
     },{merge:true}).then(function(){showNoVideosState(sheetUrl);});
   }).catch(function(e){
     if(e&&e.code==='SCOPE_DENIED'){
+      localStorage.setItem('et_redirect_intent','recover_token');
       var cp=new firebase.auth.GoogleAuthProvider();
       cp.addScope('https://www.googleapis.com/auth/drive.file');
       cp.addScope('https://www.googleapis.com/auth/spreadsheets');
       cp.setCustomParameters({prompt:'consent'});
-      auth.signInWithPopup(cp).then(function(result){
-        if(result&&result.credential&&result.credential.accessToken){
-          localStorage.setItem('et_gtoken',result.credential.accessToken);
-          createAndSaveSheet(user,result.credential.accessToken);
-        }
-      }).catch(function(){showNoVideosState(null);});
-    } else {
-      console.error('createAndSaveSheet failed:',e);
-      showNoVideosState(null);
+      auth.signInWithRedirect(cp);
     }
-  });
-}
 
 function showNoVideosState(sheetUrl){
   document.getElementById('personal-card').style.display='none';
@@ -1562,13 +1522,10 @@ showToast('PIN updated!');showHome();
 }
 function forgotPin(){
   if(!currentUser){showToast('Please sign in first, then use Forgot PIN.',true);return;}
+  localStorage.setItem('et_redirect_intent','forgot_pin');
   var p=new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(p).then(function(){
-    parentPin='1234';localStorage.setItem('et_pin','1234');
-    db.collection('users').doc(currentUser.uid).set({pin:'1234'},{merge:true});
-    document.getElementById('pin-overlay').style.display='none';
-   showToast('PIN has been reset to 1234. Change it in Settings.');
-  }).catch(function(){showToast('Could not verify your identity. Please try again.',true);});
+  p.setCustomParameters({login_hint:currentUser.email});
+  auth.signInWithRedirect(p);
 }
 
 var logoTimer;
