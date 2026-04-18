@@ -686,6 +686,7 @@ function onConfigLoaded(){
   if(!appConfig.signinEnabled){updateAuthUI(currentUser);showInstallPopupIfNeeded();return;}
   if(currentUser){updateAuthUI(currentUser);showInstallPopupIfNeeded();return;}
   if(userEmail){updateAuthUI(null);showInstallPopupIfNeeded();return;}
+  if(localStorage.getItem('et_redirect_intent')){return;}
 
   // Wait for Firebase to confirm no active session before showing modal
   auth.onAuthStateChanged(function(user){
