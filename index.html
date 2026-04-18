@@ -1554,7 +1554,7 @@ function checkPin(){
 }
 function saveSettings(){
   var np=document.getElementById('new-pin').value.trim();
-  if(!/^\d{4}$/.test(np)){alert('Please enter exactly 4 digits.');return;}
+ if(!/^\d{4}$/.test(np)){showToast('Please enter exactly 4 digits.',true);return;}
   parentPin=np;localStorage.setItem('et_pin',np);
   if(currentUser){db.collection('users').doc(currentUser.uid).set({pin:np},{merge:true});}
   alert('PIN updated!');showHome();
