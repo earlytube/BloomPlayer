@@ -372,13 +372,44 @@ flex-direction:column;align-items:center;justify-content:center;gap:18px;
   </div>
 </div>
 
-<button class="btn-back-full" onclick="goBack()">← Back to EarlyTube</button>
-<div class="version" id="version-label">EarlyTube</div>
+<div class="section-label" style="margin-top:8px;">Danger Zone</div>
+<div class="settings-card">
+  <div class="danger-row" onclick="deleteAccount()">
+    <div>
+      <div class="danger-name">Delete account</div>
+      <div class="danger-desc">Permanently deletes your account, PIN, video list and all data</div>
+    </div>
+    <span class="chevron" style="color:#EF4444;">›</span>
+  </div>
+</div>
+
+<button class="btn-back-full" onclick="goBack()">← Back to BloomPlayer</button>
+<div class="version" id="version-label">BloomPlayer</div>
 
   </div>
 </div>
 
-<script>function showToast(msg,isError){
+<script>
+  
+function showConfirm(title,sub,confirmLabel,onConfirm){
+  var overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:400;display:flex;align-items:flex-end;justify-content:center;';
+  overlay.innerHTML='<div style="background:#1E293B;border:1px solid #334155;border-radius:20px 20px 0 0;padding:28px 24px 40px;width:100%;max-width:560px;">'
+    +'<div style="font-size:17px;font-weight:700;color:#F8FAFC;margin-bottom:6px;">'+title+'</div>'
+    +'<div style="font-size:13px;color:#94A3B8;margin-bottom:24px;line-height:1.5;">'+sub+'</div>'
+    +'<div style="display:flex;gap:10px;">'
+    +'<button onclick="this.closest(\'div[style*=fixed]\').remove();" style="flex:1;padding:14px;border-radius:10px;background:#0F172A;color:#CBD5E1;border:1px solid #334155;font-size:15px;font-family:inherit;cursor:pointer;">Cancel</button>'
+    +'<button id="confirm-action-btn" style="flex:1;padding:14px;border-radius:10px;background:#EF4444;color:white;border:none;font-size:15px;font-weight:600;font-family:inherit;cursor:pointer;">'+confirmLabel+'</button>'
+    +'</div></div>';
+  document.body.appendChild(overlay);
+  overlay.querySelector('#confirm-action-btn').onclick=function(){
+    overlay.remove();
+    onConfirm();
+  };
+}
+
+function showToast(msg,isError){
+
   var t=document.getElementById('app-toast');
   if(!t){
     t=document.createElement('div');
@@ -594,7 +625,7 @@ function updateAvatarPreview(){
 function saveProfile(){
   var nickname=document.getElementById('profile-nickname-input').value.trim();
   var ageGroup=document.getElementById('profile-age-input').value;
-  if(!nickname){alert('Please enter a nickname.');return;}
+  if(!nickname){showToast('Please enter a nickname.',true);return;}
   var colorIndex=editingProfileId?allProfiles.findIndex(function(p){return p.id===editingProfileId;}):allProfiles.length;
   var color=getProfileColor(colorIndex<0?0:colorIndex);
   var initials=getInitials(nickname);
@@ -602,29 +633,30 @@ function saveProfile(){
   if(editingProfileId){
     db.collection('users').doc(currentUser.uid).collection('profiles').doc(editingProfileId)
     .update(data).then(function(){closeProfileModal();loadProfiles();})
-    .catch(function(e){alert('Could not save. Please try again.');console.error(e);});
+    .catch(function(e){showToast('Could not save. Please try again.',true);console.error(e);});
   } else {
     data.createdAt=firebase.firestore.FieldValue.serverTimestamp();
     db.collection('users').doc(currentUser.uid).collection('profiles').add(data)
     .then(function(){closeProfileModal();loadProfiles();})
-    .catch(function(e){alert('Could not save. Please try again.');console.error(e);});
+    .catch(function(e){showToast('Could not save. Please try again.',true);console.error(e);});
   }
 }
-
 function deleteProfile(){
   if(!editingProfileId)return;
   var profile=allProfiles.find(function(p){return p.id===editingProfileId;});
   var name=profile?profile.nickname:'this child';
-  if(!confirm('Delete '+name+'? This cannot be undone.'))return;
-  db.collection('users').doc(currentUser.uid).collection('profiles').doc(editingProfileId)
-  .delete().then(function(){
-    if(localStorage.getItem('et_active_profile')===editingProfileId){
-      localStorage.removeItem('et_active_profile');
-      localStorage.removeItem('et_profile_age');
-    }
-    closeProfileModal();loadProfiles();
-  }).catch(function(e){alert('Could not delete. Please try again.');console.error(e);});
+  showConfirm('Delete '+name+'?','This cannot be undone.','Delete',function(){
+    db.collection('users').doc(currentUser.uid).collection('profiles').doc(editingProfileId)
+    .delete().then(function(){
+      if(localStorage.getItem('et_active_profile')===editingProfileId){
+        localStorage.removeItem('et_active_profile');
+        localStorage.removeItem('et_profile_age');
+      }
+      closeProfileModal();loadProfiles();
+    }).catch(function(e){showToast('Could not delete. Please try again.',true);console.error(e);});
+  });
 }
+
 
 /* ── HIDE AGE SELECTOR ── */
 function saveHideAge(){
@@ -690,7 +722,7 @@ function processChangePinStep(){
         db.collection('users').doc(currentUser.uid).set({pin:parentPin},{merge:true}).catch(function(){});
       }
       closeChangePinModal();
-      alert('PIN updated successfully.');
+      showToast('PIN updated successfully.');
     } else {
       document.getElementById('change-pin-error').textContent='PINs don\'t match — try again';
       changePinBuffer='';
@@ -708,31 +740,91 @@ function processChangePinStep(){
 function openSheets(){
   var url=localStorage.getItem('et_sheet_url');
   if(url){window.open(url,'_blank');}
-  else{alert('No video list found. Add videos from the main screen first.');}
+  else{showToast('No video list found. Add videos from the main screen first.',true);}
 }
-
 /* ── DISCONNECT DRIVE ── */
 function disconnectDrive(){
-  if(!confirm('Disconnect Google Drive? Your videos will still be in your Google Drive but won\'t load in EarlyTube until you reconnect.'))return;
-  localStorage.removeItem('et_gtoken');
-  if(currentUser){
-    db.collection('users').doc(currentUser.uid).update({
-      sheetId:firebase.firestore.FieldValue.delete(),
-      sheetUrl:firebase.firestore.FieldValue.delete()
-    }).catch(function(){});
-  }
-  alert('Google Drive disconnected.');
+  showConfirm('Disconnect Google Drive?','Your videos will still be in your Drive but won\'t load in BloomPlayer until you reconnect.','Disconnect',function(){
+    localStorage.removeItem('et_gtoken');
+    if(currentUser){
+      db.collection('users').doc(currentUser.uid).update({
+        sheetId:firebase.firestore.FieldValue.delete(),
+        sheetUrl:firebase.firestore.FieldValue.delete()
+      }).catch(function(){});
+    }
+    showToast('Google Drive disconnected.');
+  });
 }
 
 /* ── SIGN OUT ── */
 function signOut(){
-  if(!confirm('Sign out of EarlyTube?'))return;
-  auth.signOut().then(function(){
-    localStorage.removeItem('et_gtoken');
-    localStorage.removeItem('et_tier');
-    localStorage.removeItem('et_email');
-    window.location.href='index.html';
+  showConfirm('Sign out of BloomPlayer?','You\'ll need to sign in again next visit.','Sign out',function(){
+    auth.signOut().then(function(){
+      localStorage.removeItem('et_gtoken');
+      localStorage.removeItem('et_tier');
+      localStorage.removeItem('et_email');
+      window.location.href='index.html';
+    });
   });
+}
+
+
+/* ── DELETE ACCOUNT ── */
+function deleteAccount(){
+  showConfirm(
+    'Delete your account?',
+    'This permanently deletes your account, PIN, video list and all data. This cannot be undone.',
+    'Delete everything',
+    function(){
+      showConfirm(
+        'Are you absolutely sure?',
+        'Your Google Sheet will remain in your Drive but all BloomPlayer data will be gone forever.',
+        'Yes, delete my account',
+        function(){
+          var user=currentUser;
+          // Step 1 — delete profiles subcollection
+          db.collection('users').doc(user.uid).collection('profiles').get()
+          .then(function(snap){
+            var batch=db.batch();
+            snap.forEach(function(doc){batch.delete(doc.ref);});
+            return batch.commit();
+          })
+          // Step 2 — delete user doc
+          .then(function(){
+            return db.collection('users').doc(user.uid).delete();
+          })
+          // Step 3 — clear localStorage
+          .then(function(){
+            localStorage.removeItem('et_pin');
+            localStorage.removeItem('et_tier');
+            localStorage.removeItem('et_gtoken');
+            localStorage.removeItem('et_email');
+            localStorage.removeItem('et_sheet_url');
+            localStorage.removeItem('et_active_profile');
+            localStorage.removeItem('et_profile_age');
+            localStorage.removeItem('et_hide_age');
+            localStorage.removeItem('et_device_id');
+          })
+          // Step 4 — delete Firebase Auth account
+          .then(function(){
+            return user.delete();
+          })
+          // Step 5 — sign out and redirect
+          .then(function(){
+            window.location.href='index.html';
+          })
+          .catch(function(e){
+            console.error('deleteAccount error:',e);
+            if(e.code==='auth/requires-recent-login'){
+              showToast('Please sign out and sign in again before deleting your account.',true);
+            } else {
+              showToast('Could not delete account. Please try again.',true);
+            }
+          });
+        }
+      );
+    }
+  );
 }
 
 /* ── BACK ── */
