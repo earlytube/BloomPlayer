@@ -1540,9 +1540,8 @@ function checkPin(){
   if(pinBuffer===parentPin){
     document.getElementById('pin-overlay').style.display='none';
     if(pinAction==='close')closeVideo();
-    if(pinAction==='settings'){
-  if(userTier==='gamma'){window.location.href='parent.html';}
-  else{show('settings-screen');}
+   if(pinAction==='settings'){
+  window.location.href='parent.html';
 }
   } else {document.getElementById('pin-error').textContent='Incorrect PIN — try again';pinBuffer='';updateDots();}
 }
