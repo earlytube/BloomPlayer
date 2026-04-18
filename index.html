@@ -700,9 +700,16 @@ function onConfigLoaded(){
 // Validates email field, then triggers Google auth
 function welcomeSignInWithGoogle(){
   document.getElementById('welcome-error').textContent='';
-  localStorage.setItem('et_redirect_intent','welcome_google');
-  auth.signInWithRedirect(provider);
+  auth.signInWithPopup(provider).catch(function(e){
+    if(e.code==='auth/popup-blocked'){
+      localStorage.setItem('et_redirect_intent','welcome_google');
+      auth.signInWithRedirect(provider);
+    } else if(e.code!=='auth/cancelled-popup-request'&&e.code!=='auth/popup-closed-by-user'){
+      showToast('Sign in failed. Please try again.',true);
+    }
+  });
 }
+
 
 
 function welcomeContinueWithEmail(){
