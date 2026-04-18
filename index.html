@@ -700,8 +700,8 @@ function onConfigLoaded(){
 function welcomeSignInWithGoogle(){
   document.getElementById('welcome-error').textContent='';
   auth.signInWithPopup(provider).catch(function(e){
-    if(e.code==='auth/popup-blocked'){alert('Pop-up was blocked. Please allow pop-ups and try again.');}
-    else if(e.code!=='auth/cancelled-popup-request'&&e.code!=='auth/popup-closed-by-user'){alert('Sign in failed. Please try again.');}
+ if(e.code==='auth/popup-blocked'){showToast('Pop-up was blocked. Please allow pop-ups and try again.',true);}
+else if(e.code!=='auth/cancelled-popup-request'&&e.code!=='auth/popup-closed-by-user'){showToast('Sign in failed. Please try again.',true);}
   });
 }
 
