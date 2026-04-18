@@ -451,8 +451,15 @@ auth.onAuthStateChanged(function(user){
     return;
   }
   currentUser=user;
+  if(sessionStorage.getItem('pin_verified')==='1'){
+    sessionStorage.removeItem('pin_verified');
+    document.getElementById('pin-screen').style.display='none';
+    document.getElementById('parent-content').style.display='flex';
+    renderParentMode();
+  }
   loadParentMode(user);
 });
+
 
 function loadParentMode(user){
   // Load tier from Firestore
