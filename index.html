@@ -594,14 +594,13 @@ var userEmail=localStorage.getItem('et_email')||null;
 if(auth.isSignInWithEmailLink(window.location.href)){
   var emailForSignIn=localStorage.getItem('et_email_for_signin');
   if(!emailForSignIn){
-    emailForSignIn=window.prompt('Please confirm your email address');
+    document.getElementById('email-confirm-modal').style.display='flex';
   }
   if(emailForSignIn){
    auth.signInWithEmailLink(emailForSignIn, window.location.href)
   .then(function(result){
     localStorage.setItem('et_email', result.user.email);
     localStorage.removeItem('et_email_for_signin');
-    // Clean URL
     window.history.replaceState(null,'',window.location.pathname);
   })
       .catch(function(e){
@@ -609,6 +608,27 @@ if(auth.isSignInWithEmailLink(window.location.href)){
       });
   }
 }
+
+function confirmEmailAndSignIn(){
+  var email=document.getElementById('email-confirm-input').value.trim();
+  if(!email||!email.includes('@')){
+    document.getElementById('email-confirm-error').textContent='Please enter a valid email.';
+    return;
+  }
+  document.getElementById('email-confirm-modal').style.display='none';
+  auth.signInWithEmailLink(email, window.location.href)
+  .then(function(result){
+    localStorage.setItem('et_email', result.user.email);
+    localStorage.removeItem('et_email_for_signin');
+    window.history.replaceState(null,'',window.location.pathname);
+  })
+  .catch(function(e){
+    document.getElementById('email-confirm-modal').style.display='flex';
+    document.getElementById('email-confirm-error').textContent='Sign-in failed. Please request a new link.';
+    console.error('Email link sign-in failed:',e);
+  });
+}
+
 
 /* ── LOAD APP CONFIG ─────────────────────────────────────────────────────── */
 function loadAppConfig(){
